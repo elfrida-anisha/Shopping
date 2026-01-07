@@ -7,12 +7,12 @@ function StudentHome() {
     const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('studentId'));
     const [cart, setCart] = useState([]);
     const [history, setHistory] = useState([]);
-    const [menuItems, setMenuItems] = useState([]); // Dynamic items from DB
+    const [menuItems, setMenuItems] = useState([]); 
     const [isPaying, setIsPaying] = useState(false);
 
     useEffect(() => {
         if (isLoggedIn) {
-            fetchMenu(); // Fetch what the admin uploaded
+            fetchMenu();
             const interval = setInterval(fetchHistory, 5000);
             fetchHistory();
             return () => clearInterval(interval);
@@ -22,16 +22,21 @@ function StudentHome() {
     const fetchMenu = async () => {
         try {
             const res = await fetch('http://localhost:5000/api/items');
+            if (!res.ok) throw new Error("Failed to fetch");
             const data = await res.json();
             setMenuItems(data);
         } catch (err) {
-            console.error("Failed to fetch menu items", err);
+            console.error("Failed to fetch menu items:", err);
         }
     };
 
     const fetchHistory = async () => {
-        const allOrders = await getOrders();
-        setHistory(allOrders.filter(o => o.studentId === studentId));
+        try {
+            const allOrders = await getOrders();
+            setHistory(allOrders.filter(o => o.studentId === studentId));
+        } catch (err) {
+            console.error("Failed to fetch history:", err);
+        }
     };
 
     const handleLogin = (e) => {
@@ -52,8 +57,8 @@ function StudentHome() {
         if (cart.length === 0) return;
         setIsPaying(true);
         
-        setTimeout(async () => {
-            const total = cart.reduce((sum, item) => sum + item.price, 0);
+        const total = cart.reduce((sum, item) => sum + item.price, 0);
+        try {
             await placeOrder({ 
                 studentId, 
                 studentName: name, 
@@ -63,17 +68,20 @@ function StudentHome() {
             setCart([]);
             setIsPaying(false);
             fetchHistory();
-        }, 2000);
+        } catch (err) {
+            alert("Order failed!");
+            setIsPaying(false);
+        }
     };
 
     if (!isLoggedIn) {
         return (
-            <div style={{ padding: '40px', textAlign: 'center' }}>
+            <div style={{ padding: '40px', textAlign: 'center', fontFamily: 'Arial' }}>
                 <h2>College Cafe Login</h2>
                 <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxWidth: '300px', margin: 'auto' }}>
-                    <input placeholder="Full Name" value={name} onChange={e => setName(e.target.value)} required />
-                    <input placeholder="Student ID" value={studentId} onChange={e => setStudentId(e.target.value)} required />
-                    <button type="submit" style={{ padding: '10px', background: '#007bff', color: 'white', border: 'none' }}>Start Ordering</button>
+                    <input style={{padding: '10px'}} placeholder="Full Name" value={name} onChange={e => setName(e.target.value)} required />
+                    <input style={{padding: '10px'}} placeholder="Student ID" value={studentId} onChange={e => setStudentId(e.target.value)} required />
+                    <button type="submit" style={{ padding: '10px', background: '#007bff', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>Start Ordering</button>
                 </form>
             </div>
         );
@@ -81,7 +89,7 @@ function StudentHome() {
 
     if (isPaying) {
         return (
-            <div style={{ padding: '50px', textAlign: 'center' }}>
+            <div style={{ padding: '50px', textAlign: 'center', fontFamily: 'Arial' }}>
                 <h2>Processing Payment... 💸</h2>
                 <p>Please do not refresh the page.</p>
             </div>
@@ -89,8 +97,7 @@ function StudentHome() {
     }
 
     return (
-        <div style={{ padding: '20px', maxWidth: '600px', margin: 'auto' }}>
-            {/* Restored Header with Logout */}
+        <div style={{ padding: '20px', maxWidth: '600px', margin: 'auto', fontFamily: 'Arial' }}>
             <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #eee', paddingBottom: '10px' }}>
                 <div>
                     <h3 style={{ margin: 0 }}>Hi, {name}</h3>
@@ -101,12 +108,11 @@ function StudentHome() {
                 </button>
             </header>
             
-            {/* Dynamic Menu Section */}
             <div style={{ margin: '20px 0', border: '1px solid #ddd', padding: '15px', borderRadius: '8px' }}>
                 <h4>Today's Menu</h4>
                 <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                     {menuItems.length === 0 ? (
-                        <p style={{ color: '#888', fontSize: '14px' }}>Loading delicious items...</p>
+                        <p style={{ color: '#888', fontSize: '14px' }}>No items available yet.</p>
                     ) : (
                         menuItems.map(item => (
                             <button 
@@ -144,7 +150,6 @@ function StudentHome() {
                 )}
             </div>
 
-            {/* History Section with original styling */}
             <h4>My Order History</h4>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 {history.length === 0 ? <p>No orders yet.</p> : history.map(order => (
