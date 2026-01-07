@@ -7,19 +7,30 @@ function StudentHome() {
     const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('studentId'));
     const [cart, setCart] = useState([]);
     const [history, setHistory] = useState([]);
+    const [menuItems, setMenuItems] = useState([]); // Dynamic items from DB
     const [isPaying, setIsPaying] = useState(false);
 
     useEffect(() => {
         if (isLoggedIn) {
+            fetchMenu(); // Fetch what the admin uploaded
             const interval = setInterval(fetchHistory, 5000);
             fetchHistory();
             return () => clearInterval(interval);
         }
     }, [isLoggedIn]);
 
+    const fetchMenu = async () => {
+        try {
+            const res = await fetch('http://localhost:5000/api/items');
+            const data = await res.json();
+            setMenuItems(data);
+        } catch (err) {
+            console.error("Failed to fetch menu items", err);
+        }
+    };
+
     const fetchHistory = async () => {
         const allOrders = await getOrders();
-        // Filter by Student ID to show only this student's history
         setHistory(allOrders.filter(o => o.studentId === studentId));
     };
 
@@ -41,7 +52,6 @@ function StudentHome() {
         if (cart.length === 0) return;
         setIsPaying(true);
         
-        // Simulate a 2-second payment delay
         setTimeout(async () => {
             const total = cart.reduce((sum, item) => sum + item.price, 0);
             await placeOrder({ 
@@ -91,27 +101,50 @@ function StudentHome() {
                 </button>
             </header>
             
-            {/* Menu Section */}
+            {/* Dynamic Menu Section */}
             <div style={{ margin: '20px 0', border: '1px solid #ddd', padding: '15px', borderRadius: '8px' }}>
-                <h4>Menu</h4>
+                <h4>Today's Menu</h4>
                 <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                    <button onClick={() => setCart([...cart, {name: 'Tea', price: 2}])}>Add Tea ()</button>
-                    <button onClick={() => setCart([...cart, {name: 'Coffee', price: 5}])}>Add Coffee ()</button>
-                    <button onClick={() => setCart([...cart, {name: 'Samosa', price: 5}])}>Add Samosa ()</button>
-                    <button onClick={() => setCart([...cart, {name: 'Burger', price: 12}])}>Add Burger (2)</button>
+                    {menuItems.length === 0 ? (
+                        <p style={{ color: '#888', fontSize: '14px' }}>Loading delicious items...</p>
+                    ) : (
+                        menuItems.map(item => (
+                            <button 
+                                key={item._id} 
+                                onClick={() => setCart([...cart, { name: item.name, price: item.price }])}
+                                style={{ 
+                                    padding: '10px 15px', 
+                                    cursor: 'pointer', 
+                                    borderRadius: '5px', 
+                                    border: '1px solid #007bff', 
+                                    background: '#fff', 
+                                    color: '#007bff',
+                                    fontWeight: '500' 
+                                }}
+                            >
+                                Add {item.name} (${item.price})
+                            </button>
+                        ))
+                    )}
                 </div>
 
                 {cart.length > 0 && (
-                    <div style={{ background: '#e3f2fd', padding: '10px', marginTop: '15px', borderRadius: '5px' }}>
+                    <div style={{ background: '#e3f2fd', padding: '15px', marginTop: '15px', borderRadius: '5px' }}>
+                        <p style={{ margin: '0 0 10px 0' }}><strong>Items:</strong> {cart.map(i => i.name).join(', ')}</p>
                         <p><strong>Cart Total: ${cart.reduce((s, i) => s + i.price, 0)}</strong></p>
-                        <button onClick={handleCheckout} style={{ background: '#28a745', color: 'white', border: 'none', padding: '10px', width: '100%', borderRadius: '5px', cursor: 'pointer' }}>
-                            Pay & Get Token
-                        </button>
+                        <div style={{ display: 'flex', gap: '10px' }}>
+                            <button onClick={handleCheckout} style={{ background: '#28a745', color: 'white', border: 'none', padding: '10px', flex: 2, borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' }}>
+                                Pay & Get Token
+                            </button>
+                            <button onClick={() => setCart([])} style={{ background: '#f44336', color: 'white', border: 'none', padding: '10px', flex: 1, borderRadius: '5px', cursor: 'pointer' }}>
+                                Clear
+                            </button>
+                        </div>
                     </div>
                 )}
             </div>
 
-            {/* History Section with Token Visibility */}
+            {/* History Section with original styling */}
             <h4>My Order History</h4>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 {history.length === 0 ? <p>No orders yet.</p> : history.map(order => (
@@ -123,7 +156,9 @@ function StudentHome() {
                         boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
                     }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold' }}>
-                            <span style={{ color: order.status === 'ready' ? '#28a745' : '#333' }}>
+                            <span style={{ 
+                                color: order.status === 'ready' ? '#28a745' : (order.status === 'preparing' ? '#ffa000' : '#333') 
+                            }}>
                                 {order.status.toUpperCase()}
                             </span>
                             <span style={{ color: '#007bff' }}>Token: {order.token}</span>
