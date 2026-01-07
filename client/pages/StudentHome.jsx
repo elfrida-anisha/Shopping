@@ -18,8 +18,12 @@ function StudentHome() {
   }, [isLoggedIn]);
 
   const fetchHistory = async () => {
-    const allOrders = await getOrders();
-    setHistory(allOrders.filter(o => o.studentId === studentId));
+    try {
+      const allOrders = await getOrders();
+      setHistory(allOrders.filter(o => o.studentId === studentId).reverse());
+    } catch (err) {
+      console.error("Failed to fetch orders");
+    }
   };
 
   const handleLogin = (e) => {
@@ -34,26 +38,17 @@ function StudentHome() {
     window.location.reload();
   };
 
-  /* ---------- CART ---------- */
-
   const addToCart = (item) => {
     const exists = cart.find(i => i.name === item.name);
     if (exists) {
-      setCart(cart.map(i =>
-        i.name === item.name ? { ...i, qty: i.qty + 1 } : i
-      ));
+      setCart(cart.map(i => i.name === item.name ? { ...i, qty: i.qty + 1 } : i));
     } else {
       setCart([...cart, { ...item, qty: 1 }]);
     }
   };
 
   const changeQty = (name, delta) => {
-    setCart(cart
-      .map(i =>
-        i.name === name ? { ...i, qty: i.qty + delta } : i
-      )
-      .filter(i => i.qty > 0)
-    );
+    setCart(cart.map(i => i.name === name ? { ...i, qty: i.qty + delta } : i).filter(i => i.qty > 0));
   };
 
   const total = cart.reduce((s, i) => s + i.price * i.qty, 0);
@@ -61,289 +56,290 @@ function StudentHome() {
   const handleCheckout = async () => {
     setIsPaying(true);
     setTimeout(async () => {
-      await placeOrder({
-        studentId,
-        studentName: name,
-        items: cart,
-        totalPrice: total
-      });
+      await placeOrder({ studentId, studentName: name, items: cart, totalPrice: total });
       setCart([]);
       setIsPaying(false);
       fetchHistory();
-    }, 1200);
+    }, 1500);
   };
 
   const menuItems = [
-    { name: 'Tea', price: 10, img: 'https://images.unsplash.com/photo-1511920170033-f8396924c348' },
-    { name: 'Coffee', price: 20, img: 'https://images.unsplash.com/photo-1509042239860-f550ce710b93' },
-    { name: 'Samosa', price: 15, img: 'https://images.unsplash.com/photo-1601050690597-df0568f70950' },
-    { name: 'Burger', price: 40, img: 'https://images.unsplash.com/photo-1550547660-d9450f859349' }
+    { name: 'Masala Tea', price: 10, img: 'https://images.unsplash.com/photo-1511920170033-f8396924c348?auto=format&fit=crop&w=300' },
+    { name: 'Cold Coffee', price: 20, img: 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=300' },
+    { name: 'Veg Samosa', price: 15, img: 'https://images.unsplash.com/photo-1601050690597-df0568f70950?auto=format&fit=crop&w=300' },
+    { name: 'Cheese Burger', price: 40, img: 'https://images.unsplash.com/photo-1550547660-d9450f859349?auto=format&fit=crop&w=300' }
   ];
-
-  /* ---------- LOGIN ---------- */
 
   if (!isLoggedIn) {
     return (
       <div style={loginWrap}>
-        <form style={loginCard} onSubmit={handleLogin}>
-          <h2 style={{ marginBottom: 6 }}>☕ Campus Café</h2>
-          <p style={{ opacity: 0.7, marginBottom: 18 }}>Smart Ordering System</p>
-
-          <input
-            placeholder="Full Name"
-            value={name}
-            onChange={e => setName(e.target.value)}
-            style={input}
-            required
-          />
-
-          <input
-            placeholder="Student ID"
-            value={studentId}
-            onChange={e => setStudentId(e.target.value)}
-            style={input}
-            required
-          />
-
-          <button style={primaryBtn}>Enter Café</button>
-        </form>
+        <div style={loginCard}>
+          <div style={logoIcon}>☕</div>
+          <h2 style={{ margin: '0 0 8px 0', color: '#1e1b4b' }}>Campus Cafe</h2>
+          <p style={{ color: '#64748b', marginBottom: 24, fontSize: 14 }}>Enter your details to start ordering</p>
+          <form onSubmit={handleLogin}>
+            <input placeholder="Full Name" value={name} onChange={e => setName(e.target.value)} style={input} required />
+            <input placeholder="Student ID" value={studentId} onChange={e => setStudentId(e.target.value)} style={input} required />
+            <button style={primaryBtn}>Get Started</button>
+          </form>
+        </div>
       </div>
     );
   }
-
-  /* ---------- PAYMENT ---------- */
 
   if (isPaying) {
     return (
       <div style={center}>
-        <h2>Processing Payment ☕</h2>
-        <p>Please wait a moment...</p>
+        <div className="spinner" style={loader}></div>
+        <h2 style={{ marginTop: 20, color: '#4338ca' }}>Securing your order...</h2>
+        <p style={{ color: '#64748b' }}>We're processing your payment</p>
       </div>
     );
   }
-
-  /* ---------- MAIN ---------- */
 
   return (
     <div style={page}>
       <header style={header}>
         <div>
-          <strong>{name}</strong>
-          <div style={{ fontSize: 12, opacity: 0.7 }}>ID: {studentId}</div>
+          <div style={{ fontSize: 14, color: '#6366f1', fontWeight: 600 }}>Welcome back,</div>
+          <div style={{ fontSize: 20, fontWeight: 800, color: '#1e1b4b' }}>{name} <span style={{ fontWeight: 400, fontSize: 14, color: '#94a3b8' }}>({studentId})</span></div>
         </div>
         <button style={logoutBtn} onClick={handleLogout}>Logout</button>
       </header>
 
-      <h3 style={title}>Menu</h3>
-
-      <div style={menuGrid}>
-        {menuItems.map(item => (
-          <div
-            key={item.name}
-            style={menuCard}
-            onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-6px)'}
-            onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
-          >
-            <img src={item.img} alt={item.name} style={menuImg} />
-            <div style={menuBody}>
-              <strong>{item.name}</strong>
-              <span style={{ opacity: 0.7 }}>₹ {item.price}</span>
-              <button style={addBtn} onClick={() => addToCart(item)}>Add</button>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {cart.length > 0 && (
-        <div style={checkoutCard}>
-          <h3>Order Summary</h3>
-
-          {cart.map(i => (
-            <div key={i.name} style={cartRow}>
-              <span>{i.name}</span>
-
-              <div style={qtyPill}>
-                <button style={qtyBtn} onClick={() => changeQty(i.name, -1)}>-</button>
-                <span>{i.qty}</span>
-                <button style={qtyBtn} onClick={() => changeQty(i.name, 1)}>+</button>
+      <div style={mainLayout}>
+        <section style={{ flex: 2 }}>
+          <h3 style={sectionTitle}>Explore Menu</h3>
+          <div style={menuGrid}>
+            {menuItems.map(item => (
+              <div key={item.name} style={menuCard}>
+                <img src={item.img} alt={item.name} style={menuImg} />
+                <div style={menuBody}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <strong style={{ fontSize: 16 }}>{item.name}</strong>
+                    <span style={priceTag}>₹{item.price}</span>
+                  </div>
+                  <button style={addBtn} onClick={() => addToCart(item)}>Add to Cart</button>
+                </div>
               </div>
+            ))}
+          </div>
 
-              <span>₹ {i.price * i.qty}</span>
+          <h3 style={sectionTitle}>Order History</h3>
+          <div style={historyList}>
+            {history.length === 0 && <p style={{ color: '#94a3b8', textAlign: 'center', padding: 20 }}>No orders yet.</p>}
+            {history.map(o => (
+              <div key={o._id} style={historyCard}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={statusBadge(o.status)}>{o.status.toUpperCase()}</span>
+                  <span style={{ fontWeight: 700, color: '#6366f1' }}>#{o.token}</span>
+                </div>
+                <div style={{ marginTop: 8, fontSize: 14, color: '#475569' }}>
+                  {o.items.map(i => `${i.name} (${i.qty})`).join(', ')}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {cart.length > 0 && (
+          <aside style={sidebar}>
+            <div style={checkoutCard}>
+              <h3 style={{ marginTop: 0, marginBottom: 20 }}>Your Order</h3>
+              <div style={cartItemsContainer}>
+                {cart.map(i => (
+                  <div key={i.name} style={cartRow}>
+                    <div style={{ fontWeight: 500 }}>{i.name}</div>
+                    <div style={qtyPill}>
+                      <button style={qtyBtn} onClick={() => changeQty(i.name, -1)}>-</button>
+                      <span style={{ minWidth: 20, textAlign: 'center' }}>{i.qty}</span>
+                      <button style={qtyBtn} onClick={() => changeQty(i.name, 1)}>+</button>
+                    </div>
+                    <div style={{ fontWeight: 600 }}>₹{i.price * i.qty}</div>
+                  </div>
+                ))}
+              </div>
+              <div style={totalRow}>
+                <span>Total Amount</span>
+                <span style={{ fontSize: 22 }}>₹{total}</span>
+              </div>
+              <button style={payBtn} onClick={handleCheckout}>Place Order Now</button>
             </div>
-          ))}
-
-          <div style={totalRow}>
-            <strong>Total</strong>
-            <strong>₹ {total}</strong>
-          </div>
-
-          <button style={payBtn} onClick={handleCheckout}>
-            Pay & Place Order
-          </button>
-        </div>
-      )}
-
-      <h3 style={title}>Order History</h3>
-      {history.map(o => (
-        <div key={o._id} style={historyCard}>
-          <strong>{o.status.toUpperCase()}</strong> — Token #{o.token}
-          <div style={{ opacity: 0.7 }}>
-            {o.items.map(i => `${i.name} x${i.qty}`).join(', ')}
-          </div>
-        </div>
-      ))}
+          </aside>
+        )}
+      </div>
     </div>
   );
 }
 
-/* ================= STYLES ================= */
+/* ================= THEME & STYLES ================= */
 
 const page = {
   minHeight: '100vh',
-  padding: 24,
-  background: 'linear-gradient(135deg,#eef2ff,#fdf2f8)',
-  fontFamily: '"Inter", system-ui'
+  padding: '20px 5vw',
+  background: '#f8fafc',
+  fontFamily: '"Plus Jakarta Sans", "Inter", sans-serif',
+  color: '#1e293b'
 };
 
 const header = {
   display: 'flex',
   justifyContent: 'space-between',
   alignItems: 'center',
-  padding: '16px 22px',
-  borderRadius: 18,
-  background: 'rgba(255,255,255,0.75)',
-  backdropFilter: 'blur(10px)',
-  boxShadow: '0 12px 30px rgba(0,0,0,0.12)',
-  marginBottom: 32
+  padding: '20px 30px',
+  borderRadius: 24,
+  background: '#ffffff',
+  boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
+  marginBottom: 40
 };
 
-const title = {
-  margin: '36px 0 16px',
-  fontSize: 20,
-  fontWeight: 700
+const mainLayout = {
+  display: 'flex',
+  gap: 30,
+  flexWrap: 'wrap'
+};
+
+const sectionTitle = {
+  fontSize: 22,
+  fontWeight: 800,
+  marginBottom: 20,
+  color: '#1e1b4b'
 };
 
 const menuGrid = {
   display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))',
-  gap: 20
+  gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
+  gap: 24,
+  marginBottom: 40
 };
 
 const menuCard = {
-  background: 'rgba(255,255,255,0.8)',
-  borderRadius: 20,
+  background: '#fff',
+  borderRadius: 24,
   overflow: 'hidden',
-  boxShadow: '0 20px 40px rgba(0,0,0,0.15)',
-  transition: 'all .25s ease'
+  boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.05)',
+  transition: 'transform 0.2s ease',
+  border: '1px solid #f1f5f9'
 };
 
-const menuImg = { width: '100%', height: 140, objectFit: 'cover' };
+const menuImg = { width: '100%', height: 160, objectFit: 'cover' };
 
-const menuBody = {
-  padding: 16,
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 6
+const menuBody = { padding: 20 };
+
+const priceTag = {
+  background: '#eef2ff',
+  color: '#4338ca',
+  padding: '4px 10px',
+  borderRadius: 8,
+  fontSize: 14,
+  fontWeight: 700
 };
 
 const addBtn = {
-  marginTop: 10,
-  padding: '10px 14px',
-  borderRadius: 999,
+  marginTop: 16,
+  width: '100%',
+  padding: '12px',
+  borderRadius: 12,
   border: 'none',
-  background: 'linear-gradient(90deg,#22c55e,#16a34a)',
+  background: '#1e1b4b',
   color: '#fff',
   fontWeight: 600,
-  cursor: 'pointer'
+  cursor: 'pointer',
+  transition: 'opacity 0.2s'
 };
 
+const sidebar = { flex: 1, minWidth: 320 };
+
 const checkoutCard = {
-  marginTop: 40,
-  padding: 24,
-  borderRadius: 22,
-  background: 'linear-gradient(135deg,#eef2ff,#ffffff)',
-  boxShadow: '0 25px 50px rgba(79,70,229,0.25)'
+  padding: 30,
+  borderRadius: 28,
+  background: '#fff',
+  boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)',
+  position: 'sticky',
+  top: 20,
+  border: '1px solid #e2e8f0'
+};
+
+const cartItemsContainer = {
+  maxHeight: '40vh',
+  overflowY: 'auto',
+  marginBottom: 20
 };
 
 const cartRow = {
-  display: 'grid',
-  gridTemplateColumns: '1fr auto auto',
-  gap: 14,
+  display: 'flex',
+  justifyContent: 'space-between',
   alignItems: 'center',
-  padding: '10px 0'
+  padding: '12px 0',
+  borderBottom: '1px solid #f1f5f9'
 };
 
 const qtyPill = {
   display: 'flex',
   alignItems: 'center',
-  gap: 12,
-  background: '#fff',
-  borderRadius: 999,
-  padding: '6px 12px',
-  boxShadow: '0 6px 16px rgba(0,0,0,0.15)'
+  gap: 10,
+  background: '#f8fafc',
+  borderRadius: 10,
+  padding: '4px 8px'
 };
 
 const qtyBtn = {
-  width: 28,
-  height: 28,
-  borderRadius: '50%',
+  width: 24,
+  height: 24,
+  borderRadius: 6,
   border: 'none',
-  background: '#4f46e5',
-  color: '#fff',
+  background: '#fff',
+  color: '#1e1b4b',
+  fontWeight: 'bold',
   cursor: 'pointer',
-
-  /* ⭐ FIX FOR CENTERING */
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  lineHeight: '1',
-  padding: 0,
-  fontSize: 16
+  boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
 };
-
 
 const totalRow = {
   display: 'flex',
   justifyContent: 'space-between',
-  marginTop: 16,
-  paddingTop: 10,
-  borderTop: '1px solid #e5e7eb'
+  alignItems: 'center',
+  marginTop: 20,
+  padding: '20px 0',
+  borderTop: '2px dashed #e2e8f0',
+  fontWeight: 800
 };
 
 const payBtn = {
-  marginTop: 22,
   width: '100%',
-  padding: 14,
-  borderRadius: 999,
-  background: 'linear-gradient(90deg,#6366f1,#8b5cf6)',
+  padding: '16px',
+  borderRadius: 16,
+  background: 'linear-gradient(135deg, #6366f1 0%, #4338ca 100%)',
   color: '#fff',
   border: 'none',
-  fontSize: 17,
+  fontSize: 16,
   fontWeight: 700,
   cursor: 'pointer',
-  boxShadow: '0 12px 30px rgba(99,102,241,0.45)'
+  boxShadow: '0 10px 15px -3px rgba(99, 102, 241, 0.3)'
 };
+
+const historyList = { display: 'flex', flexDirection: 'column', gap: 12 };
 
 const historyCard = {
-  background: 'rgba(255,255,255,0.8)',
-  padding: 16,
-  marginTop: 14,
+  background: '#fff',
+  padding: 20,
   borderRadius: 16,
-  boxShadow: '0 8px 20px rgba(0,0,0,0.12)'
+  border: '1px solid #f1f5f9'
 };
 
-const logoutBtn = {
-  padding: '6px 12px',
-  borderRadius: 8,
-  border: 'none',
-  background: '#ef4444',
-  color: '#fff',
-  cursor: 'pointer'
-};
+const statusBadge = (status) => ({
+  fontSize: 11,
+  fontWeight: 800,
+  padding: '4px 12px',
+  borderRadius: 20,
+  background: status === 'ready' ? '#dcfce7' : status === 'pending' ? '#fef9c3' : '#f1f5f9',
+  color: status === 'ready' ? '#166534' : status === 'pending' ? '#854d0e' : '#475569'
+});
 
 const loginWrap = {
   height: '100vh',
-  background: 'linear-gradient(135deg,#6366f1,#8b5cf6)',
+  background: '#6366f1',
+  backgroundImage: 'radial-gradient(at 0% 0%, hsla(253,16%,7%,1) 0, transparent 50%), radial-gradient(at 50% 0%, hsla(225,39%,30%,1) 0, transparent 50%)',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center'
@@ -351,29 +347,53 @@ const loginWrap = {
 
 const loginCard = {
   background: '#fff',
-  padding: 36,
-  width: 340,
-  borderRadius: 22,
+  padding: '40px 30px',
+  width: 380,
+  borderRadius: 32,
   textAlign: 'center',
-  boxShadow: '0 30px 60px rgba(0,0,0,0.35)'
+  boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
+};
+
+const logoIcon = {
+  fontSize: 40,
+  marginBottom: 10,
+  display: 'inline-block',
+  background: '#eef2ff',
+  width: 80,
+  height: 80,
+  lineHeight: '80px',
+  borderRadius: '50%'
 };
 
 const input = {
   width: '100%',
-  padding: 12,
-  marginTop: 12,
-  borderRadius: 10,
-  border: '1px solid #d1d5db'
+  padding: '14px 16px',
+  marginBottom: 16,
+  borderRadius: 12,
+  border: '1px solid #e2e8f0',
+  fontSize: 15,
+  outline: 'none',
+  boxSizing: 'border-box'
 };
 
 const primaryBtn = {
-  marginTop: 18,
   width: '100%',
-  padding: 12,
-  borderRadius: 999,
+  padding: 14,
+  borderRadius: 12,
   border: 'none',
   background: '#4f46e5',
   color: '#fff',
+  fontWeight: 700,
+  fontSize: 16,
+  cursor: 'pointer'
+};
+
+const logoutBtn = {
+  padding: '8px 16px',
+  borderRadius: 10,
+  border: '1px solid #fee2e2',
+  background: '#fff',
+  color: '#ef4444',
   fontWeight: 600,
   cursor: 'pointer'
 };
@@ -383,7 +403,17 @@ const center = {
   display: 'flex',
   flexDirection: 'column',
   alignItems: 'center',
-  justifyContent: 'center'
+  justifyContent: 'center',
+  background: '#f8fafc'
+};
+
+const loader = {
+  border: '4px solid #f3f3f3',
+  borderTop: '4px solid #4338ca',
+  borderRadius: '50%',
+  width: '40px',
+  height: '40px',
+  animation: 'spin 1s linear infinite'
 };
 
 export default StudentHome;
